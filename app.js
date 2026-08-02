@@ -11,6 +11,10 @@ const videoChannel = document.getElementById("videoChannel");
 const videoStatus = document.getElementById("videoStatus");
 const closeVideoBtn = document.getElementById("closeVideoBtn");
 const manualPlayBtn = document.getElementById("manualPlayBtn");
+const jarvisVoiceAudio =
+  document.getElementById("jarvisVoiceAudio");
+const enableJarvisVoiceBtn =
+  document.getElementById("enableJarvisVoiceBtn");
 
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -56,7 +60,11 @@ const state = {
   youtubeResults: [],
   youtubeResultIndex: 0,
   currentVideoTitle: "",
-  currentVideoChannel: ""
+  currentVideoChannel: "",
+  jarvisVoiceUnlocked: false,
+  jarvisVoiceObjectUrl: null,
+  pendingJarvisVoiceUrl: null,
+  pendingJarvisVoiceResolve: null
 };
 
 function setMode(mode) {
@@ -1308,6 +1316,181 @@ manualPlayBtn.addEventListener("click", () => {
   }
 });
 
+
+function createSilentWavBlob(durationMs = 120) {
+  const sampleRate = 8000;
+  const sampleCount = Math.max(
+    1,
+    Math.floor((sampleRate * durationMs) / 1000)
+  );
+  const buffer = new ArrayBuffer(44 + sampleCount * 2);
+  const view = new DataView(buffer);
+
+  const writeText = (offset, text) => {
+    for (let i = 0; i < text.length; i++) {
+      view.setUint8(offset + i, text.charCodeAt(i));
+    }
+  };
+
+  writeText(0, "RIFF");
+  view.setUint32(4, 36 + sampleCount * 2, true);
+  writeText(8, "WAVE");
+  writeText(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeText(36, "data");
+  view.setUint32(40, sampleCount * 2, true);
+
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
+async function unlockJarvisVoice() {
+  try {
+    const silentUrl = URL.createObjectURL(createSilentWavBlob());
+
+    jarvisVoiceAudio.src = silentUrl;
+    jarvisVoiceAudio.volume = 1;
+    jarvisVoiceAudio.muted = false;
+
+    await jarvisVoiceAudio.play();
+    jarvisVoiceAudio.pause();
+    jarvisVoiceAudio.currentTime = 0;
+
+    URL.revokeObjectURL(silentUrl);
+
+    state.jarvisVoiceUnlocked = true;
+    enableJarvisVoiceBtn.hidden = true;
+
+    console.info("JARVIS cloud voice audio unlocked.");
+    return true;
+  } catch (error) {
+    console.warn("JARVIS audio unlock was blocked:", error);
+    state.jarvisVoiceUnlocked = false;
+    enableJarvisVoiceBtn.hidden = false;
+    return false;
+  }
+}
+
+function finishJarvisSpeech(resolve) {
+  state.speaking = false;
+
+  if (state.jarvisVoiceObjectUrl) {
+    URL.revokeObjectURL(state.jarvisVoiceObjectUrl);
+    state.jarvisVoiceObjectUrl = null;
+  }
+
+  if (state.sessionActive) {
+    resetSessionTimer();
+    setMode("listening");
+  } else {
+    setMode("idle");
+  }
+
+  if (
+    state.videoShouldResumeAfterSpeech &&
+    state.youtubePlayerReady &&
+    state.videoOverlayOpen
+  ) {
+    state.videoShouldResumeAfterSpeech = false;
+    state.youtubePlayer.playVideo();
+  }
+
+  if (state.keepListening) {
+    setTimeout(startRecognition, 250);
+  }
+
+  resolve();
+}
+
+function fallbackBrowserSpeech(text) {
+  return new Promise((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = state.voice || null;
+    utterance.rate = 0.95;
+    utterance.pitch = 0.88;
+    utterance.volume = 1;
+
+    utterance.onend = resolve;
+    utterance.onerror = resolve;
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  });
+}
+
+async function fetchJarvisSpeech(text) {
+  const response = await fetch("/api/tts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ text })
+  });
+
+  if (!response.ok) {
+    const rawError = await response.text();
+    let message = rawError;
+
+    try {
+      message = JSON.parse(rawError)?.error || rawError;
+    } catch {
+      // Keep raw server text.
+    }
+
+    throw new Error(
+      message || `JARVIS TTS failed with status ${response.status}.`
+    );
+  }
+
+  return response.blob();
+}
+
+async function playJarvisSpeechBlob(blob) {
+  if (state.jarvisVoiceObjectUrl) {
+    URL.revokeObjectURL(state.jarvisVoiceObjectUrl);
+  }
+
+  const objectUrl = URL.createObjectURL(blob);
+  state.jarvisVoiceObjectUrl = objectUrl;
+  state.pendingJarvisVoiceUrl = objectUrl;
+
+  jarvisVoiceAudio.pause();
+  jarvisVoiceAudio.src = objectUrl;
+  jarvisVoiceAudio.currentTime = 0;
+  jarvisVoiceAudio.volume = 1;
+  jarvisVoiceAudio.muted = false;
+
+  await jarvisVoiceAudio.play();
+
+  state.jarvisVoiceUnlocked = true;
+  state.pendingJarvisVoiceUrl = null;
+  enableJarvisVoiceBtn.hidden = true;
+}
+
+enableJarvisVoiceBtn.addEventListener("click", async () => {
+  try {
+    if (state.pendingJarvisVoiceUrl) {
+      jarvisVoiceAudio.src = state.pendingJarvisVoiceUrl;
+      jarvisVoiceAudio.volume = 1;
+      jarvisVoiceAudio.muted = false;
+      await jarvisVoiceAudio.play();
+      state.jarvisVoiceUnlocked = true;
+      enableJarvisVoiceBtn.hidden = true;
+      return;
+    }
+
+    await unlockJarvisVoice();
+  } catch (error) {
+    console.error("JARVIS voice enable failed:", error);
+    enableJarvisVoiceBtn.hidden = false;
+  }
+});
+
 function loadVoices() {
   const voices = speechSynthesis.getVoices() || [];
 
@@ -1493,48 +1676,53 @@ function stopRecognition() {
 }
 
 function speak(text) {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     speechSynthesis.cancel();
     stopRecognition();
+
+    jarvisVoiceAudio.pause();
+    jarvisVoiceAudio.currentTime = 0;
 
     state.speaking = true;
     setMode("speaking");
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.voice = state.voice || null;
-    utterance.rate = 0.95;
-    utterance.pitch = 0.88;
-    utterance.volume = 1;
+    const finish = () => finishJarvisSpeech(resolve);
 
-    const finish = () => {
-      state.speaking = false;
+    jarvisVoiceAudio.onended = finish;
+    jarvisVoiceAudio.onerror = async (event) => {
+      console.error("JARVIS audio playback error:", event);
 
-      if (state.sessionActive) {
-        resetSessionTimer();
-        setMode("listening");
-      } else {
-        setMode("idle");
+      try {
+        await fallbackBrowserSpeech(text);
+      } finally {
+        finish();
       }
-
-      if (
-        state.videoShouldResumeAfterSpeech &&
-        state.youtubePlayerReady &&
-        state.videoOverlayOpen
-      ) {
-        state.videoShouldResumeAfterSpeech = false;
-        state.youtubePlayer.playVideo();
-      }
-
-      if (state.keepListening) {
-        setTimeout(startRecognition, 250);
-      }
-
-      resolve();
     };
 
-    utterance.onend = finish;
-    utterance.onerror = finish;
-    speechSynthesis.speak(utterance);
+    try {
+      const audioBlob = await fetchJarvisSpeech(text);
+      await playJarvisSpeechBlob(audioBlob);
+    } catch (error) {
+      console.error("JARVIS cloud speech failed:", error);
+
+      // If the browser blocks the generated audio, keep the audio URL
+      // ready and show a one-tap phone fallback.
+      if (
+        error?.name === "NotAllowedError" &&
+        state.jarvisVoiceObjectUrl
+      ) {
+        state.pendingJarvisVoiceUrl =
+          state.jarvisVoiceObjectUrl;
+        enableJarvisVoiceBtn.hidden = false;
+        return;
+      }
+
+      try {
+        await fallbackBrowserSpeech(text);
+      } finally {
+        finish();
+      }
+    }
   });
 }
 
@@ -1719,6 +1907,7 @@ function initRecognition() {
 activateBtn.addEventListener("click", async () => {
   try {
     await initAudio();
+    await unlockJarvisVoice();
     initRecognition();
 
     state.keepListening = true;

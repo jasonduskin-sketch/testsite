@@ -1,35 +1,43 @@
-UPLOAD THIS UPDATE UNZIPPED
+THIS UPDATE FIXES JARVIS'S VOICE ON PHONES
+
+The earlier site used the phone/browser's built-in speechSynthesis voice.
+That is why the hologram activated but JARVIS could remain silent on mobile.
+
+This version generates a real WAV response using Gemini TTS and plays it
+through a persistent audio element that is unlocked when you tap Activate.
+
+UPLOAD
 
 1. Extract this ZIP.
 2. Open the extracted folder.
-3. Open GitHub and enter the testsite repository.
+3. Open your GitHub testsite repository.
 4. Click Add file > Upload files.
 5. Drag EVERYTHING inside the extracted folder into GitHub.
 6. Confirm the api folder contains:
       chat.js
       youtube.js
+      tts.js
 7. Commit the update.
 8. Wait for Vercel's newest deployment to say Ready.
-9. Open the live website and press Ctrl+F5.
+9. Fully close the browser tab on your phone.
+10. Reopen the site and tap Activate Voice Assistant.
+11. Say:
+      JARVIS, tell me who you are.
 
-TEST THESE EXACT PHRASES:
+NO NEW API KEY IS REQUIRED.
 
-"JARVIS, play Johnny Cash Hurt on YouTube."
-"JARVIS, can you play the Superman trailer on YouTube?"
-"JARVIS, put on a video of Alabama football highlights."
-"JARVIS, show me a Johnny Cash music video."
+The existing GEMINI_API_KEY powers both chat and voice.
 
-The updated parser now understands natural YouTube requests instead of
-sending them to Gemini as ordinary chat questions.
+TEST THE TTS ROUTE
 
-CHECK THE ROUTE FIRST:
+Open:
+https://www.simplytestsite.com/api/tts
 
-https://www.simplytestsite.com/api/youtube
-
-It must show:
+Expected JSON includes:
+"status": "ok"
 "apiKeyConfigured": true
 
-F12 CONSOLE DIAGNOSTICS:
+If your phone still blocks audio, the site displays:
+Tap to Enable JARVIS Voice
 
-When a request is recognized, Console shows:
-Routing command to YouTube search: <search terms>
+Tap that button once.

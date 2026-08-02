@@ -1,49 +1,36 @@
-# JARVIS Voice Assistant — YouTube Edition
+# JARVIS Voice Assistant — Gemini Cloud Voice Edition
 
-This update adds secure YouTube search and an embedded voice-controlled player.
+This update replaces unreliable device/browser speech synthesis with
+server-generated Gemini TTS audio.
 
-## Vercel environment variables
+## What changed
+
+- JARVIS now speaks through `api/tts.js`.
+- Desktop and mobile receive the same generated voice.
+- The existing `GEMINI_API_KEY` is reused.
+- The default TTS model is `gemini-3.1-flash-tts-preview`.
+- The default voice is `Charon`.
+- The delivery prompt requests refined British English, mature articulation,
+  measured pacing, and an original AI-assistant style.
+- Browser speech synthesis remains only as an emergency fallback.
+
+## Required Vercel variable
 
 ```env
-GEMINI_API_KEY=your_private_gemini_key
-GEMINI_MODEL=gemini-3.6-flash
-YOUTUBE_API_KEY=your_private_youtube_data_api_key
+GEMINI_API_KEY=your_existing_private_key
 ```
 
-## Example voice commands
+## Optional Vercel variables
 
-```text
-JARVIS, play Johnny Cash Hurt on YouTube.
-Pause video.
-Resume.
-Turn it down.
-Set volume to 30 percent.
-Skip ahead 30 seconds.
-Go back 10 seconds.
-Next video.
-Close video.
+```env
+JARVIS_TTS_MODEL=gemini-3.1-flash-tts-preview
+JARVIS_TTS_VOICE=Charon
 ```
 
-## API health checks
+## Health checks
 
 ```text
 https://your-domain.com/api/chat
 https://your-domain.com/api/youtube
+https://your-domain.com/api/tts
 ```
-
-Both routes should return JSON with `status: "ok"`.
-
-The YouTube key remains private in Vercel. Browser playback uses the official
-YouTube IFrame Player API.
-
-
-## Natural YouTube phrases
-
-Version 5.1 recognizes conversational wording such as:
-
-- “Can you play the Superman trailer on YouTube?”
-- “Put on Alabama football highlights.”
-- “Show me a Johnny Cash music video.”
-- “I want to watch the new trailer on YouTube.”
-
-Open the browser console to see whether a phrase was routed to YouTube.
