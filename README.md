@@ -42,3 +42,11 @@ This version adds a biometric-style login simulation: activating the assistant n
 
 
 Responsive layout update: the activation/login scan interface now scales and fits small phones, large phones, tablets, desktops, and short landscape screens more cleanly.
+
+
+## Drop My Needle
+
+Version 6.2 adds the dedicated phrase **“Drop my needle.”** It plays the
+configured Tony Stark vibes YouTube video in a compact, non-blocking player.
+The site attempts audible autoplay and keeps a small fallback control only
+for browsers that enforce an autoplay restriction.

@@ -837,3 +837,115 @@ body[data-state="listening"] .video-shell {
     font-size: 11px;
   }
 }
+
+
+/* ---------------------------------------------------------------
+   Compact JARVIS audio player
+   Keeps YouTube visible without covering the JARVIS interface.
+---------------------------------------------------------------- */
+
+.video-overlay {
+  inset: auto
+    max(14px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    auto;
+  display: block;
+  width: min(440px, calc(100vw - 28px));
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  transform: translateY(18px) scale(0.97);
+  transform-origin: bottom right;
+  transition:
+    opacity 0.28s ease,
+    visibility 0.28s ease,
+    transform 0.28s ease;
+}
+
+.video-overlay.open {
+  transform: translateY(0) scale(1);
+}
+
+.video-shell {
+  width: 100%;
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(255, 204, 102, 0.06),
+    0 0 42px rgba(255, 137, 0, 0.15),
+    0 18px 55px rgba(0, 0, 0, 0.68);
+}
+
+.video-header,
+.video-footer {
+  padding: 10px 12px;
+}
+
+.video-kicker {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+}
+
+#videoTitle {
+  font-size: 13px;
+}
+
+#videoChannel {
+  font-size: 10px;
+}
+
+.video-close {
+  width: 32px;
+  height: 32px;
+  font-size: 21px;
+}
+
+.video-stage {
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+}
+
+.video-footer {
+  min-height: 34px;
+  font-size: 10px;
+}
+
+.manual-play {
+  padding: 11px 18px;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .video-overlay {
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: auto;
+    padding: 0;
+    transform-origin: bottom center;
+  }
+
+  .video-shell {
+    width: 100%;
+    border-radius: 14px;
+  }
+
+  .video-stage {
+    min-height: 0;
+  }
+
+  .video-footer span:first-child {
+    display: none;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .video-overlay {
+    width: min(360px, 44vw);
+  }
+
+  .video-header,
+  .video-footer {
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+}

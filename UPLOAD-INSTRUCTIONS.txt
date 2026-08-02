@@ -1,46 +1,38 @@
-THIS UPDATE FIXES JARVIS'S VOICE ON PHONES
+DROP MY NEEDLE UPDATE
 
-The earlier site used the phone/browser's built-in speechSynthesis voice.
-That is why the hologram activated but JARVIS could remain silent on mobile.
+NEW COMMAND
 
-This version generates a real WAV response using Gemini TTS and plays it
-through a persistent audio element that is unlocked when you tap Activate.
+Say exactly:
+
+JARVIS, drop my needle.
+
+JARVIS will say:
+
+Dropping the needle, sir.
+
+It then plays the exact YouTube video supplied for the shortcut:
+Tony Stark vibes playlist
+Video ID: 8mZrzRCtQp4
+
+WHAT CHANGED
+
+1. The YouTube player is now a small card in the lower-right corner.
+2. It no longer darkens or covers the entire JARVIS screen.
+3. It attempts to begin playback automatically.
+4. The activation tap primes the YouTube player to improve autoplay.
+5. If a phone still enforces its own autoplay restriction, a small
+   Tap to Start Audio fallback appears only after the automatic attempt.
+6. The embedded fullscreen button is disabled.
 
 UPLOAD
 
 1. Extract this ZIP.
 2. Open the extracted folder.
-3. Open your GitHub testsite repository.
+3. Open the GitHub testsite repository.
 4. Click Add file > Upload files.
 5. Drag EVERYTHING inside the extracted folder into GitHub.
-6. Confirm the api folder contains:
-      chat.js
-      youtube.js
-      tts.js
-7. Commit the update.
-8. Wait for Vercel's newest deployment to say Ready.
-9. Fully close the browser tab on your phone.
-10. Reopen the site and tap Activate Voice Assistant.
-11. Say:
-      JARVIS, tell me who you are.
-
-NO NEW API KEY IS REQUIRED.
-
-The existing GEMINI_API_KEY powers both chat and voice.
-
-TEST THE TTS ROUTE
-
-Open:
-https://www.simplytestsite.com/api/tts
-
-Expected JSON includes:
-"status": "ok"
-"apiKeyConfigured": true
-
-If your phone still blocks audio, the site displays:
-Tap to Enable JARVIS Voice
-
-Tap that button once.
-
-
-Responsive layout update: the activation/login scan interface now scales and fits small phones, large phones, tablets, desktops, and short landscape screens more cleanly.
+6. Commit the changes.
+7. Wait for Vercel's newest deployment to say Ready.
+8. Fully refresh the website.
+9. Activate JARVIS.
+10. Say: JARVIS, drop my needle.

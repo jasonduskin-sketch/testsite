@@ -27,6 +27,14 @@ const SpeechRecognition =
 
 const TAU = Math.PI * 2;
 
+const DROP_MY_NEEDLE_TRACK = {
+  videoId: "8mZrzRCtQp4",
+  title: "Tony Stark vibes playlist",
+  channelTitle: "Drop My Needle",
+  description: "Dedicated JARVIS music shortcut.",
+  thumbnail: ""
+};
+
 const state = {
   mode: "idle",
   wakePhrases: ["jarvis", "hey jarvis", "okay jarvis", "ok jarvis"],
@@ -72,7 +80,8 @@ const state = {
   pendingJarvisVoiceUrl: null,
   pendingJarvisVoiceResolve: null,
   activationInProgress: false,
-  loginCameraStream: null
+  loginCameraStream: null,
+  youtubePlaybackPrimed: false
 };
 
 function setMode(mode) {
@@ -815,6 +824,7 @@ function createYouTubePlayer() {
       controls: 1,
       playsinline: 1,
       rel: 0,
+      fs: 0,
       origin: window.location.origin
     },
     events: {
@@ -850,7 +860,8 @@ function createYouTubePlayer() {
 
       onAutoplayBlocked() {
         manualPlayBtn.hidden = false;
-        setVideoStatus("Press play");
+        manualPlayBtn.textContent = "Tap to Start Audio";
+        setVideoStatus("Autoplay blocked");
       },
 
       onError(event) {
@@ -864,6 +875,11 @@ function createYouTubePlayer() {
 
 window.onYouTubeIframeAPIReady = () => {
   state.youtubeApiReady = true;
+
+  if (!state.pendingVideo) {
+    state.pendingVideo = DROP_MY_NEEDLE_TRACK;
+  }
+
   createYouTubePlayer();
 };
 
@@ -1051,6 +1067,85 @@ function parseNumberFromSpeech(text, fallback) {
   return fallback;
 }
 
+
+function primeYouTubePlayback() {
+  if (
+    !state.youtubePlayerReady ||
+    state.youtubePlaybackPrimed
+  ) {
+    return;
+  }
+
+  try {
+    state.youtubePlayer.mute();
+    state.youtubePlayer.playVideo();
+
+    setTimeout(() => {
+      try {
+        state.youtubePlayer.pauseVideo();
+        state.youtubePlayer.seekTo(0, true);
+        state.youtubePlayer.unMute();
+        state.youtubePlaybackPrimed = true;
+        console.info("YouTube playback primed by activation tap.");
+      } catch (error) {
+        console.warn("Unable to finish YouTube priming:", error);
+      }
+    }, 140);
+  } catch (error) {
+    console.warn("Unable to prime YouTube playback:", error);
+  }
+}
+
+async function playDropMyNeedle() {
+  preventVideoAutoResume();
+  state.thinking = true;
+  setMode("thinking");
+  stopRecognition();
+
+  try {
+    state.youtubeResults = [DROP_MY_NEEDLE_TRACK];
+    state.youtubeResultIndex = 0;
+
+    await displayYouTubeVideo(DROP_MY_NEEDLE_TRACK, false);
+    await speak("Dropping the needle, sir.");
+
+    manualPlayBtn.hidden = true;
+    state.youtubePlayer.unMute();
+    state.youtubePlayer.setVolume(70);
+    state.youtubePlayer.loadVideoById(
+      DROP_MY_NEEDLE_TRACK.videoId
+    );
+    setVideoStatus("Starting audio");
+
+    // Most desktop browsers should begin immediately. If a phone blocks
+    // audible autoplay, reveal a small fallback only after the attempt.
+    setTimeout(() => {
+      if (
+        window.YT?.PlayerState &&
+        state.youtubePlayerReady &&
+        state.youtubePlayer.getPlayerState() !==
+          YT.PlayerState.PLAYING
+      ) {
+        manualPlayBtn.hidden = false;
+        manualPlayBtn.textContent = "Tap to Start Audio";
+        setVideoStatus("Tap once for audio");
+      }
+    }, 1600);
+  } catch (error) {
+    console.error("Drop My Needle playback error:", error);
+    setVideoStatus("Playback error");
+    await speak(
+      "I couldn't drop the needle. Please check the YouTube player."
+    );
+  } finally {
+    state.thinking = false;
+
+    if (!state.speaking) {
+      setMode(state.sessionActive ? "listening" : "idle");
+    }
+  }
+}
+
 async function playYouTubeSearch(query) {
   preventVideoAutoResume();
   state.thinking = true;
@@ -1107,6 +1202,15 @@ async function handleYouTubeCommand(text) {
   const query = extractYouTubeQuery(normalized);
 
   console.info("JARVIS command heard:", normalized);
+
+  if (
+    normalized === "drop my needle" ||
+    normalized === "drop the needle"
+  ) {
+    console.info("Routing command to Drop My Needle shortcut.");
+    await playDropMyNeedle();
+    return true;
+  }
 
   if (query) {
     console.info("Routing command to YouTube search:", query);
@@ -1320,7 +1424,10 @@ manualPlayBtn.addEventListener("click", () => {
   manualPlayBtn.hidden = true;
 
   if (state.youtubePlayerReady) {
+    state.youtubePlayer.unMute();
+    state.youtubePlayer.setVolume(70);
     state.youtubePlayer.playVideo();
+    setVideoStatus("Playing");
   }
 });
 
@@ -2005,6 +2112,8 @@ activateBtn.addEventListener("click", async () => {
 
   state.activationInProgress = true;
   activateBtn.disabled = true;
+
+  primeYouTubePlayback();
 
   try {
     await initAudio();
