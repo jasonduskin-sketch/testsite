@@ -1,6 +1,6 @@
 {
-  "name": "testsite-rogue-gemini",
-  "version": "2.0.0",
+  "name": "testsite-jarvis-gemini",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
   "engines": {

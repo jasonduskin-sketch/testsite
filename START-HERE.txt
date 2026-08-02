@@ -1,4 +1,4 @@
-ROGUE VOICE ASSISTANT — FIXED COMPLETE BUILD
+JARVIS VOICE ASSISTANT — FIXED COMPLETE BUILD
 
 The previous deployment error was caused by an unnecessary "functions"
 pattern in vercel.json. This version removes that pattern.
@@ -40,7 +40,7 @@ Expected result:
 
 {
   "status": "ok",
-  "service": "Rogue Gemini API",
+  "service": "JARVIS Gemini API",
   "model": "gemini-3.6-flash",
   "apiKeyConfigured": true
 }

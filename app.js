@@ -12,11 +12,13 @@ const TAU = Math.PI * 2;
 
 const state = {
   mode: "idle",
-  wakePhrase: "hey rogue",
+  wakePhrases: ["jarvis", "hey jarvis", "okay jarvis", "ok jarvis"],
+  sessionActive: false,
+  sessionTimer: null,
+  sessionExpiresAt: 0,
   recognition: null,
   keepListening: false,
   recognizing: false,
-  listeningForCommand: false,
   speaking: false,
   thinking: false,
   audioContext: null,
@@ -25,7 +27,7 @@ const state = {
   micStream: null,
   voice: null,
   lastVoiceEnergy: 0,
-  history: JSON.parse(localStorage.getItem("rogue_voice_history") || "[]"),
+  history: JSON.parse(localStorage.getItem("jarvis_voice_history") || "[]"),
   particles: [],
   stars: [],
   arcs: [],
@@ -45,7 +47,7 @@ function setMode(mode) {
 
 function saveHistory() {
   localStorage.setItem(
-    "rogue_voice_history",
+    "jarvis_voice_history",
     JSON.stringify(state.history.slice(-14))
   );
 }
@@ -719,30 +721,172 @@ async function initAudio() {
 
 function loadVoices() {
   const voices = speechSynthesis.getVoices() || [];
-  const preferredMatchers = [
-    (voice) =>
-      /en-GB/i.test(voice.lang) &&
-      /(daniel|george|ryan|arthur|male)/i.test(voice.name),
-    (voice) => /en-GB/i.test(voice.lang),
-    (voice) =>
-      /en-US/i.test(voice.lang) &&
-      /(male|david|guy|roger)/i.test(voice.name),
-    (voice) => /en/i.test(voice.lang)
+
+  if (!voices.length) {
+    state.voice = null;
+    return;
+  }
+
+  // Prefer polished British English voices commonly available
+  // through Windows, macOS, Android, and Chromium.
+  const preferredNames = [
+    "Microsoft Ryan Online (Natural) - English (United Kingdom)",
+    "Microsoft Ryan - English (United Kingdom)",
+    "Microsoft George - English (United Kingdom)",
+    "Microsoft Thomas - English (United Kingdom)",
+    "Daniel",
+    "Arthur",
+    "Oliver",
+    "George",
+    "Ryan",
+    "Google UK English Male",
+    "English United Kingdom"
   ];
 
-  for (const matcher of preferredMatchers) {
-    const found = voices.find(matcher);
-    if (found) {
-      state.voice = found;
+  for (const preferredName of preferredNames) {
+    const exactMatch = voices.find(
+      (voice) =>
+        voice.name.toLowerCase() === preferredName.toLowerCase()
+    );
+
+    if (exactMatch) {
+      state.voice = exactMatch;
+      console.info(
+        "JARVIS voice selected:",
+        exactMatch.name,
+        exactMatch.lang
+      );
       return;
     }
   }
 
-  state.voice = voices[0] || null;
-}
+  const rankedVoices = voices
+    .map((voice) => {
+      const name = voice.name.toLowerCase();
+      const lang = voice.lang.toLowerCase();
+      let score = 0;
 
+      if (lang === "en-gb") score += 100;
+      else if (lang.startsWith("en-gb")) score += 95;
+      else if (lang.startsWith("en")) score += 35;
+
+      if (name.includes("natural")) score += 35;
+      if (name.includes("online")) score += 20;
+      if (name.includes("neural")) score += 20;
+
+      if (
+        /(ryan|george|daniel|arthur|oliver|thomas|male)/i.test(
+          voice.name
+        )
+      ) {
+        score += 30;
+      }
+
+      if (
+        /(female|susan|hazel|sonia|libby|molly|serena)/i.test(
+          voice.name
+        )
+      ) {
+        score -= 25;
+      }
+
+      return { voice, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  state.voice = rankedVoices[0]?.voice || voices[0] || null;
+
+  if (state.voice) {
+    console.info(
+      "JARVIS voice selected:",
+      state.voice.name,
+      state.voice.lang
+    );
+  }
+}
 speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
+
+const SESSION_TIMEOUT_MS = 3 * 60 * 1000;
+
+function normalizeSpeech(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findWakePhrase(text) {
+  const normalized = normalizeSpeech(text);
+
+  for (const phrase of state.wakePhrases) {
+    const index = normalized.indexOf(phrase);
+    if (index !== -1) {
+      return { phrase, index, normalized };
+    }
+  }
+
+  return null;
+}
+
+function resetSessionTimer() {
+  clearTimeout(state.sessionTimer);
+  state.sessionExpiresAt = Date.now() + SESSION_TIMEOUT_MS;
+
+  state.sessionTimer = setTimeout(() => {
+    endConversationSession(false);
+  }, SESSION_TIMEOUT_MS);
+}
+
+function beginConversationSession() {
+  state.sessionActive = true;
+  resetSessionTimer();
+
+  if (!state.speaking && !state.thinking) {
+    setMode("listening");
+  }
+}
+
+function endConversationSession(announce = false) {
+  const wasActive = state.sessionActive;
+
+  state.sessionActive = false;
+  state.sessionExpiresAt = 0;
+  clearTimeout(state.sessionTimer);
+  state.sessionTimer = null;
+
+  if (!state.speaking && !state.thinking) {
+    setMode("idle");
+  }
+
+  if (announce && wasActive) {
+    speak("Going quiet.");
+  }
+}
+
+function isSleepCommand(text) {
+  const normalized = normalizeSpeech(text);
+
+  return [
+    "go to sleep",
+    "stop listening",
+    "that is all",
+    "that's all",
+    "dismiss",
+    "stand by",
+    "standby"
+  ].some((command) => normalized === command || normalized.endsWith(command));
+}
+
+function stripWakePhrase(text) {
+  const wake = findWakePhrase(text);
+  if (!wake) return normalizeSpeech(text);
+
+  return wake.normalized
+    .slice(wake.index + wake.phrase.length)
+    .trim();
+}
 
 function startRecognition() {
   if (!state.recognition || state.recognizing || state.speaking) return;
@@ -762,18 +906,26 @@ function stopRecognition() {
 function speak(text) {
   return new Promise((resolve) => {
     speechSynthesis.cancel();
+    stopRecognition();
+
     state.speaking = true;
     setMode("speaking");
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = state.voice || null;
-    utterance.rate = 1.01;
-    utterance.pitch = 0.91;
+    utterance.rate = 0.95;
+    utterance.pitch = 0.88;
     utterance.volume = 1;
 
     const finish = () => {
       state.speaking = false;
-      setMode("idle");
+
+      if (state.sessionActive) {
+        resetSessionTimer();
+        setMode("listening");
+      } else {
+        setMode("idle");
+      }
 
       if (state.keepListening) {
         setTimeout(startRecognition, 250);
@@ -789,7 +941,10 @@ function speak(text) {
 }
 
 async function sendPrompt(message) {
-  state.listeningForCommand = false;
+  const cleanMessage = normalizeSpeech(message);
+  if (!cleanMessage) return;
+
+  beginConversationSession();
   state.thinking = true;
   setMode("thinking");
   stopRecognition();
@@ -799,12 +954,21 @@ async function sendPrompt(message) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message,
+        message: cleanMessage,
         history: state.history.slice(-12)
       })
     });
 
-    const data = await response.json();
+    const rawResponse = await response.text();
+    let data;
+
+    try {
+      data = JSON.parse(rawResponse);
+    } catch {
+      throw new Error(
+        `The intelligence service returned ${response.status}: ${rawResponse.slice(0, 120)}`
+      );
+    }
 
     if (!response.ok) {
       throw new Error(data.error || "Failed to get assistant response.");
@@ -813,17 +977,23 @@ async function sendPrompt(message) {
     const reply =
       data.text?.trim() || "I'm sorry, I wasn't able to respond.";
 
-    state.history.push({ role: "user", content: message });
+    state.history.push({ role: "user", content: cleanMessage });
     state.history.push({ role: "assistant", content: reply });
     saveHistory();
 
+    resetSessionTimer();
     await speak(reply);
   } catch (error) {
-    console.error(error);
-    await speak("I'm sorry, I couldn't reach the intelligence service. Please check the Vercel API configuration.");
+    console.error("JARVIS assistant error:", error);
+    await speak(
+      "I'm sorry, I couldn't reach the intelligence service. Please check the Vercel API configuration."
+    );
   } finally {
     state.thinking = false;
-    if (!state.speaking) setMode("idle");
+
+    if (!state.speaking) {
+      setMode(state.sessionActive ? "listening" : "idle");
+    }
   }
 }
 
@@ -843,8 +1013,8 @@ function initRecognition() {
   recognition.onstart = () => {
     state.recognizing = true;
 
-    if (!state.speaking && !state.thinking && !state.listeningForCommand) {
-      setMode("idle");
+    if (!state.speaking && !state.thinking) {
+      setMode(state.sessionActive ? "listening" : "idle");
     }
   };
 
@@ -857,7 +1027,10 @@ function initRecognition() {
   };
 
   recognition.onerror = (event) => {
-    console.warn("Speech recognition error:", event.error);
+    // "no-speech" is normal during quiet periods. Chrome restarts automatically.
+    if (event.error !== "no-speech") {
+      console.warn("Speech recognition error:", event.error);
+    }
   };
 
   recognition.onresult = async (event) => {
@@ -874,43 +1047,52 @@ function initRecognition() {
       }
     }
 
-    const finalText = finalTranscript.trim().toLowerCase();
-    const interimText = interimTranscript.trim().toLowerCase();
+    const finalText = normalizeSpeech(finalTranscript);
+    const interimText = normalizeSpeech(interimTranscript);
 
     if (state.speaking || state.thinking) return;
 
-    if (!state.listeningForCommand) {
-      const combined = `${finalText} ${interimText}`.trim();
+    if (!state.sessionActive) {
+      if (!finalText) return;
 
-      if (combined.includes(state.wakePhrase)) {
-        setMode("listening");
+      const wake = findWakePhrase(finalText);
+      if (!wake) return;
 
-        const wakeIndex = combined.indexOf(state.wakePhrase);
-        const trailingCommand = combined
-          .slice(wakeIndex + state.wakePhrase.length)
-          .trim();
+      beginConversationSession();
 
-        if (trailingCommand) {
-          await sendPrompt(trailingCommand);
-          return;
-        }
+      const trailingCommand = stripWakePhrase(finalText);
 
-        state.listeningForCommand = true;
-
-        clearTimeout(window.__rogueCommandTimer);
-        window.__rogueCommandTimer = setTimeout(() => {
-          state.listeningForCommand = false;
-          if (!state.speaking && !state.thinking) setMode("idle");
-        }, 6500);
+      if (trailingCommand) {
+        await sendPrompt(trailingCommand);
+      } else {
+        await speak("At your service.");
       }
 
       return;
     }
 
+    // During the three-minute session, every completed sentence is a command.
     if (finalText) {
-      clearTimeout(window.__rogueCommandTimer);
-      await sendPrompt(finalText);
-    } else {
+      resetSessionTimer();
+
+      if (isSleepCommand(finalText)) {
+        endConversationSession(true);
+        return;
+      }
+
+      const command = stripWakePhrase(finalText);
+
+      // Ignore the wake phrase if the user repeats it by itself.
+      if (!command && findWakePhrase(finalText)) {
+        setMode("listening");
+        return;
+      }
+
+      await sendPrompt(command || finalText);
+      return;
+    }
+
+    if (interimText) {
       setMode("listening");
     }
   };
@@ -924,6 +1106,7 @@ activateBtn.addEventListener("click", async () => {
     initRecognition();
 
     state.keepListening = true;
+    state.sessionActive = false;
     overlay.classList.add("hidden");
     setMode("idle");
     startRecognition();
