@@ -41,3 +41,6 @@ If your phone still blocks audio, the site displays:
 Tap to Enable JARVIS Voice
 
 Tap that button once.
+
+
+Responsive layout update: the activation/login scan interface now scales and fits small phones, large phones, tablets, desktops, and short landscape screens more cleanly.

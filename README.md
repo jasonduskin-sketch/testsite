@@ -39,3 +39,6 @@ https://your-domain.com/api/tts
 ## Login scan update
 
 This version adds a biometric-style login simulation: activating the assistant now opens the camera, shows a vertical and horizontal scan over the live image, and then auto-greets the user with “Welcome back sir.”
+
+
+Responsive layout update: the activation/login scan interface now scales and fits small phones, large phones, tablets, desktops, and short landscape screens more cleanly.

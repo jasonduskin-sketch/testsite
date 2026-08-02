@@ -59,3 +59,6 @@ api/youtube.js
 
 After deployment, test:
 https://www.simplytestsite.com/api/youtube
+
+
+Responsive layout update: the activation/login scan interface now scales and fits small phones, large phones, tablets, desktops, and short landscape screens more cleanly.

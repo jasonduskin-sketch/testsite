@@ -684,3 +684,156 @@ body[data-state="listening"] .video-shell {
     font-size: 20px;
   }
 }
+
+.activation-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.activation-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 175, 35, 0.24);
+  border-radius: 999px;
+}
+
+
+/* Responsive login / scan layout */
+.login-sequence {
+  gap: clamp(12px, 2vh, 18px);
+}
+
+.login-headings .brand {
+  margin: 0 0 10px;
+}
+
+.camera-shell {
+  margin: 0 auto;
+  width: min(460px, 84vw, calc(62dvh * 0.8));
+  max-width: 100%;
+  aspect-ratio: 4 / 5;
+}
+
+.camera-readout {
+  font-size: clamp(9px, 1.8vw, 11px);
+}
+
+.camera-readout-top,
+.camera-readout-bottom {
+  gap: 8px;
+}
+
+#activationHint,
+.login-substatus,
+.activation-panel p {
+  font-size: clamp(12px, 1.8vw, 13px);
+}
+
+@media (max-width: 900px) {
+  .camera-shell {
+    width: min(420px, 82vw, calc(58dvh * 0.8));
+  }
+}
+
+@media (max-width: 640px) {
+  .activation-panel {
+    width: min(96vw, 520px);
+    max-height: 95dvh;
+    padding: 16px 14px;
+    border-radius: 18px;
+  }
+
+  .brand {
+    letter-spacing: 0.34em;
+    font-size: 11px;
+    margin: 12px 0 16px;
+  }
+
+  .login-status {
+    font-size: clamp(18px, 5vw, 22px);
+  }
+
+  .camera-shell {
+    width: min(88vw, 340px, calc(54dvh * 0.8));
+    aspect-ratio: 3 / 4;
+    border-radius: 18px;
+  }
+
+  .face-outline {
+    width: 50%;
+    height: 60%;
+  }
+
+  .camera-readout {
+    left: 12px;
+    right: 12px;
+    letter-spacing: 0.1em;
+  }
+
+  .camera-readout-top {
+    top: 12px;
+  }
+
+  .camera-readout-bottom {
+    bottom: 12px;
+  }
+}
+
+@media (max-height: 740px) {
+  .activation-panel {
+    max-height: 96dvh;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .mini-reactor {
+    width: 68px;
+    height: 68px;
+  }
+
+  .brand {
+    margin: 10px 0 12px;
+  }
+
+  .activation-panel p {
+    margin-top: 10px;
+  }
+
+  .camera-shell {
+    width: min(360px, 78vw, calc(50dvh * 0.8));
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .overlay {
+    align-items: start;
+  }
+
+  .activation-panel {
+    width: min(96vw, 980px);
+    max-height: 96dvh;
+    padding: 14px;
+  }
+
+  .login-sequence {
+    grid-template-columns: minmax(180px, 250px) minmax(180px, 1fr);
+    align-items: center;
+    column-gap: 14px;
+  }
+
+  .login-headings {
+    text-align: left;
+    padding-left: 6px;
+  }
+
+  .login-headings .brand {
+    margin-bottom: 8px;
+  }
+
+  .camera-shell {
+    width: min(42vw, 300px, calc(74dvh * 0.8));
+    aspect-ratio: 4 / 5;
+  }
+
+  .login-substatus,
+  .activation-panel p {
+    font-size: 11px;
+  }
+}
