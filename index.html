@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#020303" />
+  <title>Rogue Voice Assistant</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-state="idle">
+  <div id="activationOverlay" class="overlay">
+    <div class="activation-panel">
+      <div class="mini-reactor" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="brand">ROGUE</div>
+      <button id="activateBtn" class="activate-btn" type="button">
+        Activate Voice Assistant
+      </button>
+      <p>Grant microphone access, then say “Hey Rogue.”</p>
+    </div>
+  </div>
+
+  <main class="app" aria-label="Rogue voice assistant">
+    <canvas id="starfield"></canvas>
+    <canvas id="hologram"></canvas>
+
+    <div class="hud-frame" aria-hidden="true">
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+      <div class="scan-line"></div>
+    </div>
+
+    <div class="status-dot" aria-hidden="true"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
