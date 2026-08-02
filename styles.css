@@ -308,3 +308,175 @@ body[data-state="speaking"] .status-dot {
     height: 52px;
   }
 }
+
+
+/* ---------------------------------------------------------------
+   YouTube media overlay
+---------------------------------------------------------------- */
+
+.video-overlay {
+  position: fixed;
+  z-index: 12;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 3vw, 42px);
+  background:
+    radial-gradient(circle at center, rgba(30, 18, 0, 0.22), rgba(0, 0, 0, 0.72));
+  backdrop-filter: blur(5px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.32s ease,
+    visibility 0.32s ease;
+}
+
+.video-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.video-shell {
+  width: min(1180px, 94vw);
+  border: 1px solid rgba(255, 183, 43, 0.32);
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(2, 4, 4, 0.94);
+  box-shadow:
+    0 0 0 1px rgba(255, 204, 102, 0.05),
+    0 0 55px rgba(255, 137, 0, 0.17),
+    0 28px 90px rgba(0, 0, 0, 0.72);
+}
+
+.video-header,
+.video-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  background:
+    linear-gradient(90deg, rgba(255, 164, 16, 0.08), transparent 38%),
+    rgba(8, 10, 9, 0.95);
+}
+
+.video-header {
+  border-bottom: 1px solid rgba(255, 177, 35, 0.16);
+}
+
+.video-footer {
+  border-top: 1px solid rgba(255, 177, 35, 0.14);
+  color: rgba(255, 226, 169, 0.52);
+  font-size: 12px;
+}
+
+.video-heading {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.video-kicker {
+  color: rgba(255, 173, 22, 0.7);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+}
+
+#videoTitle {
+  overflow: hidden;
+  color: rgba(255, 246, 219, 0.94);
+  font-size: clamp(14px, 2vw, 18px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#videoChannel {
+  color: rgba(255, 226, 169, 0.48);
+  font-size: 12px;
+}
+
+.video-close {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 188, 58, 0.25);
+  border-radius: 50%;
+  color: rgba(255, 231, 180, 0.9);
+  background: rgba(255, 174, 24, 0.06);
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.video-close:hover {
+  background: rgba(255, 174, 24, 0.14);
+  box-shadow: 0 0 22px rgba(255, 153, 0, 0.16);
+}
+
+.video-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  min-height: 270px;
+  background:
+    radial-gradient(circle at center, rgba(255, 153, 0, 0.05), transparent 46%),
+    #000;
+}
+
+#youtubePlayer,
+#youtubePlayer iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.manual-play {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 211, 117, 0.58);
+  border-radius: 999px;
+  padding: 15px 26px;
+  color: #1c0d00;
+  background: linear-gradient(135deg, #fff0a7, #ffae19 58%, #ff7a00);
+  box-shadow: 0 0 38px rgba(255, 155, 0, 0.38);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+#videoStatus {
+  color: rgba(255, 188, 60, 0.78);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+body[data-state="listening"] .video-shell {
+  box-shadow:
+    0 0 0 1px rgba(255, 204, 102, 0.08),
+    0 0 72px rgba(255, 154, 0, 0.24),
+    0 28px 90px rgba(0, 0, 0, 0.72);
+}
+
+@media (max-width: 700px) {
+  .video-overlay {
+    padding: 10px;
+  }
+
+  .video-shell {
+    width: 100%;
+    border-radius: 14px;
+  }
+
+  .video-stage {
+    min-height: 210px;
+  }
+
+  .video-footer span:first-child {
+    display: none;
+  }
+}

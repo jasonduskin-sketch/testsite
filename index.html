@@ -33,9 +33,55 @@
       <div class="scan-line"></div>
     </div>
 
+
+    <section
+      id="videoOverlay"
+      class="video-overlay"
+      aria-hidden="true"
+      aria-label="YouTube video player"
+    >
+      <div class="video-shell">
+        <header class="video-header">
+          <div class="video-heading">
+            <span class="video-kicker">YOUTUBE // JARVIS MEDIA</span>
+            <strong id="videoTitle">YouTube</strong>
+            <span id="videoChannel"></span>
+          </div>
+
+          <button
+            id="closeVideoBtn"
+            class="video-close"
+            type="button"
+            aria-label="Close video"
+          >
+            ×
+          </button>
+        </header>
+
+        <div class="video-stage">
+          <div id="youtubePlayer"></div>
+
+          <button
+            id="manualPlayBtn"
+            class="manual-play"
+            type="button"
+            hidden
+          >
+            Play Video
+          </button>
+        </div>
+
+        <footer class="video-footer">
+          <span>Say “pause video,” “resume,” “skip ahead,” or “close video.”</span>
+          <span id="videoStatus">Ready</span>
+        </footer>
+      </div>
+    </section>
+
     <div class="status-dot" aria-hidden="true"></div>
   </main>
 
   <script src="app.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>

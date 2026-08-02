@@ -47,3 +47,15 @@ Expected result:
 
 If apiKeyConfigured is false, the site deployed correctly but the Gemini key
 still needs to be added to Vercel Production and the project redeployed.
+
+
+YOUTUBE UPDATE
+
+Add YOUTUBE_API_KEY to Vercel before deploying this version.
+
+This package includes:
+api/chat.js
+api/youtube.js
+
+After deployment, test:
+https://www.simplytestsite.com/api/youtube

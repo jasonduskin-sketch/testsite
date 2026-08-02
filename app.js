@@ -5,6 +5,13 @@ const starfieldCanvas = document.getElementById("starfield");
 const hctx = hologramCanvas.getContext("2d");
 const sctx = starfieldCanvas.getContext("2d");
 
+const videoOverlay = document.getElementById("videoOverlay");
+const videoTitle = document.getElementById("videoTitle");
+const videoChannel = document.getElementById("videoChannel");
+const videoStatus = document.getElementById("videoStatus");
+const closeVideoBtn = document.getElementById("closeVideoBtn");
+const manualPlayBtn = document.getElementById("manualPlayBtn");
+
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -37,7 +44,19 @@ const state = {
   pointerY: 0,
   targetPointerX: 0,
   targetPointerY: 0,
-  lastFrame: performance.now()
+  lastFrame: performance.now(),
+  youtubeApiReady: false,
+  youtubePlayer: null,
+  youtubePlayerReady: false,
+  youtubePlayerResolvers: [],
+  pendingVideo: null,
+  videoOverlayOpen: false,
+  videoPlaying: false,
+  videoShouldResumeAfterSpeech: false,
+  youtubeResults: [],
+  youtubeResultIndex: 0,
+  currentVideoTitle: "",
+  currentVideoChannel: ""
 };
 
 function setMode(mode) {
@@ -719,6 +738,576 @@ async function initAudio() {
   source.connect(state.analyser);
 }
 
+
+function decodeHtmlEntities(text) {
+  const documentFragment = new DOMParser().parseFromString(
+    String(text || ""),
+    "text/html"
+  );
+
+  return documentFragment.documentElement.textContent || "";
+}
+
+function setVideoStatus(message) {
+  videoStatus.textContent = String(message || "").toUpperCase();
+}
+
+function openVideoOverlay() {
+  state.videoOverlayOpen = true;
+  videoOverlay.classList.add("open");
+  videoOverlay.setAttribute("aria-hidden", "false");
+}
+
+function closeVideoOverlay() {
+  state.videoOverlayOpen = false;
+  state.videoPlaying = false;
+  state.videoShouldResumeAfterSpeech = false;
+
+  if (state.youtubePlayerReady) {
+    state.youtubePlayer.stopVideo();
+  }
+
+  videoOverlay.classList.remove("open");
+  videoOverlay.setAttribute("aria-hidden", "true");
+  manualPlayBtn.hidden = true;
+  setVideoStatus("Closed");
+}
+
+function resolveYouTubePlayerWaiters() {
+  const resolvers = state.youtubePlayerResolvers.splice(0);
+
+  for (const resolve of resolvers) {
+    resolve(state.youtubePlayer);
+  }
+}
+
+function createYouTubePlayer() {
+  if (
+    !state.youtubeApiReady ||
+    state.youtubePlayer ||
+    !state.pendingVideo
+  ) {
+    return;
+  }
+
+  state.youtubePlayer = new YT.Player("youtubePlayer", {
+    width: "100%",
+    height: "100%",
+    videoId: state.pendingVideo.videoId,
+    playerVars: {
+      autoplay: 0,
+      controls: 1,
+      playsinline: 1,
+      rel: 0,
+      origin: window.location.origin
+    },
+    events: {
+      onReady(event) {
+        state.youtubePlayerReady = true;
+        event.target.setVolume(55);
+
+        if (state.pendingVideo?.videoId) {
+          event.target.cueVideoById(state.pendingVideo.videoId);
+        }
+
+        setVideoStatus("Ready");
+        resolveYouTubePlayerWaiters();
+      },
+
+      onStateChange(event) {
+        if (!window.YT?.PlayerState) return;
+
+        state.videoPlaying =
+          event.data === YT.PlayerState.PLAYING;
+
+        if (event.data === YT.PlayerState.PLAYING) {
+          manualPlayBtn.hidden = true;
+          setVideoStatus("Playing");
+        } else if (event.data === YT.PlayerState.PAUSED) {
+          setVideoStatus("Paused");
+        } else if (event.data === YT.PlayerState.BUFFERING) {
+          setVideoStatus("Buffering");
+        } else if (event.data === YT.PlayerState.ENDED) {
+          setVideoStatus("Ended");
+        }
+      },
+
+      onAutoplayBlocked() {
+        manualPlayBtn.hidden = false;
+        setVideoStatus("Press play");
+      },
+
+      onError(event) {
+        console.error("YouTube player error:", event.data);
+        setVideoStatus("Playback error");
+        manualPlayBtn.hidden = false;
+      }
+    }
+  });
+}
+
+window.onYouTubeIframeAPIReady = () => {
+  state.youtubeApiReady = true;
+  createYouTubePlayer();
+};
+
+function waitForYouTubePlayer() {
+  if (state.youtubePlayerReady) {
+    return Promise.resolve(state.youtubePlayer);
+  }
+
+  createYouTubePlayer();
+
+  return new Promise((resolve, reject) => {
+    state.youtubePlayerResolvers.push(resolve);
+
+    setTimeout(() => {
+      if (!state.youtubePlayerReady) {
+        reject(new Error("The YouTube player did not load."));
+      }
+    }, 12000);
+  });
+}
+
+async function displayYouTubeVideo(result, autoplay = false) {
+  state.pendingVideo = result;
+  state.currentVideoTitle = decodeHtmlEntities(result.title);
+  state.currentVideoChannel = decodeHtmlEntities(result.channelTitle);
+  state.videoShouldResumeAfterSpeech = false;
+
+  videoTitle.textContent = state.currentVideoTitle;
+  videoChannel.textContent = state.currentVideoChannel;
+  manualPlayBtn.hidden = true;
+  setVideoStatus("Loading");
+  openVideoOverlay();
+
+  createYouTubePlayer();
+
+  const player = await waitForYouTubePlayer();
+
+  if (autoplay) {
+    player.loadVideoById(result.videoId);
+  } else {
+    player.cueVideoById(result.videoId);
+  }
+}
+
+function pauseVideoForVoice(autoResume = true) {
+  if (!state.youtubePlayerReady || !state.videoPlaying) {
+    state.videoShouldResumeAfterSpeech = false;
+    return false;
+  }
+
+  state.youtubePlayer.pauseVideo();
+  state.videoShouldResumeAfterSpeech = autoResume;
+  return true;
+}
+
+function preventVideoAutoResume() {
+  state.videoShouldResumeAfterSpeech = false;
+}
+
+function getPlayerVolume() {
+  if (!state.youtubePlayerReady) return 55;
+  return state.youtubePlayer.getVolume();
+}
+
+async function searchYouTube(query) {
+  setVideoStatus("Searching");
+
+  const response = await fetch("/api/youtube", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ query })
+  });
+
+  const rawResponse = await response.text();
+  let data;
+
+  try {
+    data = JSON.parse(rawResponse);
+  } catch {
+    throw new Error(
+      `YouTube search returned ${response.status}: ${rawResponse.slice(0, 120)}`
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || "YouTube search failed.");
+  }
+
+  return data.results || [];
+}
+
+function extractYouTubeQuery(text) {
+  let normalized = normalizeSpeech(text);
+
+  if (!normalized) return "";
+
+  // Remove polite conversational filler so natural requests still route
+  // to the YouTube player rather than being sent to Gemini.
+  normalized = normalized
+    .replace(
+      /^(?:please |could you |can you |would you |will you |i want you to |i would like you to |i'd like you to |let me |go ahead and )+/,
+      ""
+    )
+    .replace(/\b(?:please|for me)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const explicitPatterns = [
+    /^(?:play|show|open|find|search for|put on|watch) (.+?) on youtube$/,
+    /^(?:play|show|open|find|search for|put on|watch) youtube (.+)$/,
+    /^youtube (?:play|show|open|find|search for) (.+)$/,
+    /^search youtube (?:for )?(.+)$/,
+    /^find (.+?) (?:on|from) youtube$/,
+    /^(?:play|show|open|put on) (?:a |the )?youtube video (?:for |of |about )?(.+)$/,
+    /^(?:i want to watch|i would like to watch|i'd like to watch) (.+?)(?: on youtube)?$/,
+    /^(?:show me|play me) (.+?)(?: on youtube)?$/
+  ];
+
+  for (const pattern of explicitPatterns) {
+    const match = normalized.match(pattern);
+
+    if (match?.[1]) {
+      return match[1]
+        .replace(/\b(?:video|music video)\b$/g, "")
+        .trim();
+    }
+  }
+
+  // If the user clearly mentions YouTube, remove the command words and
+  // use what remains as the search query.
+  if (normalized.includes("youtube")) {
+    const query = normalized
+      .replace(/\byoutube\b/g, " ")
+      .replace(
+        /^(?:play|show|open|find|search|search for|put on|watch|look up)\s+/,
+        ""
+      )
+      .replace(/\b(?:on|from)\b\s*$/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (query) return query;
+  }
+
+  // During an open JARVIS session, common media phrasing such as
+  // "put on Johnny Cash Hurt" should also be treated as YouTube.
+  const implicitPatterns = [
+    /^(?:put on|show me|play me|watch) (.+)$/,
+    /^play (?:the |a )?(?:video|music video|trailer|clip) (?:for |of |about )?(.+)$/,
+    /^play (.+?) (?:video|music video|trailer|clip)$/
+  ];
+
+  for (const pattern of implicitPatterns) {
+    const match = normalized.match(pattern);
+    if (match?.[1]) return match[1].trim();
+  }
+
+  return "";
+}
+function parseNumberFromSpeech(text, fallback) {
+  const digitMatch = String(text).match(/\b(\d{1,3})\b/);
+  if (digitMatch) return Number(digitMatch[1]);
+
+  const words = {
+    one: 1,
+    two: 2,
+    three: 3,
+    five: 5,
+    ten: 10,
+    fifteen: 15,
+    twenty: 20,
+    thirty: 30,
+    forty: 40,
+    fifty: 50,
+    sixty: 60,
+    ninety: 90
+  };
+
+  for (const [word, value] of Object.entries(words)) {
+    if (String(text).includes(word)) return value;
+  }
+
+  return fallback;
+}
+
+async function playYouTubeSearch(query) {
+  preventVideoAutoResume();
+  state.thinking = true;
+  setMode("thinking");
+  stopRecognition();
+
+  try {
+    const results = await searchYouTube(query);
+
+    state.youtubeResults = results;
+    state.youtubeResultIndex = 0;
+
+    const result = results[0];
+    await displayYouTubeVideo(result, false);
+    await speak(`Playing ${decodeHtmlEntities(result.title)}.`);
+    state.youtubePlayer.playVideo();
+  } catch (error) {
+    console.error("YouTube search error:", error);
+    setVideoStatus("Search error");
+    await speak(
+      "I recognized that as a YouTube request, but the YouTube search or player failed. Please check the YouTube API route."
+    );
+  } finally {
+    state.thinking = false;
+
+    if (!state.speaking) {
+      setMode(state.sessionActive ? "listening" : "idle");
+    }
+  }
+}
+
+async function playAdjacentYouTubeResult(direction) {
+  if (!state.youtubeResults.length) {
+    await speak("There isn't another search result queued.");
+    return;
+  }
+
+  preventVideoAutoResume();
+
+  const resultCount = state.youtubeResults.length;
+  state.youtubeResultIndex =
+    (state.youtubeResultIndex + direction + resultCount) %
+    resultCount;
+
+  const result = state.youtubeResults[state.youtubeResultIndex];
+
+  await displayYouTubeVideo(result, false);
+  await speak(`Playing ${decodeHtmlEntities(result.title)}.`);
+  state.youtubePlayer.playVideo();
+}
+
+async function handleYouTubeCommand(text) {
+  const normalized = normalizeSpeech(text);
+  const query = extractYouTubeQuery(normalized);
+
+  console.info("JARVIS command heard:", normalized);
+
+  if (query) {
+    console.info("Routing command to YouTube search:", query);
+    await playYouTubeSearch(query);
+    return true;
+  }
+
+  if (
+    /^(pause|hold|freeze)( the)?( youtube)? video$/.test(normalized) ||
+    normalized === "pause it"
+  ) {
+    preventVideoAutoResume();
+
+    if (state.youtubePlayerReady) {
+      state.youtubePlayer.pauseVideo();
+      await speak("Paused.");
+    } else {
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    /^(resume|continue)( the)?( youtube)? video$/.test(normalized) ||
+    normalized === "resume" ||
+    normalized === "continue" ||
+    normalized === "play the video" ||
+    normalized === "play video"
+  ) {
+    preventVideoAutoResume();
+
+    if (state.youtubePlayerReady && state.videoOverlayOpen) {
+      await speak("Resuming.");
+      state.youtubePlayer.playVideo();
+    } else {
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    /^(close|hide|stop)( the)?( youtube)? video$/.test(normalized) ||
+    normalized === "close youtube" ||
+    normalized === "stop youtube"
+  ) {
+    preventVideoAutoResume();
+
+    if (state.videoOverlayOpen) {
+      closeVideoOverlay();
+      await speak("Video closed.");
+    } else {
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    normalized === "mute video" ||
+    normalized === "mute the video" ||
+    normalized === "mute it"
+  ) {
+    preventVideoAutoResume();
+
+    if (state.youtubePlayerReady) {
+      state.youtubePlayer.mute();
+      await speak("Muted.");
+    } else {
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    normalized === "unmute video" ||
+    normalized === "unmute the video" ||
+    normalized === "unmute it"
+  ) {
+    if (state.youtubePlayerReady) {
+      state.youtubePlayer.unMute();
+      await speak("Unmuted.");
+    } else {
+      preventVideoAutoResume();
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    normalized.includes("volume up") ||
+    normalized.includes("turn it up") ||
+    normalized === "louder"
+  ) {
+    if (state.youtubePlayerReady) {
+      const volume = Math.min(100, getPlayerVolume() + 10);
+      state.youtubePlayer.setVolume(volume);
+      await speak(`Volume ${volume} percent.`);
+    } else {
+      preventVideoAutoResume();
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    normalized.includes("volume down") ||
+    normalized.includes("turn it down") ||
+    normalized === "quieter"
+  ) {
+    if (state.youtubePlayerReady) {
+      const volume = Math.max(0, getPlayerVolume() - 10);
+      state.youtubePlayer.setVolume(volume);
+      await speak(`Volume ${volume} percent.`);
+    } else {
+      preventVideoAutoResume();
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    normalized.includes("set volume") ||
+    normalized.includes("volume to")
+  ) {
+    if (state.youtubePlayerReady) {
+      const volume = Math.max(
+        0,
+        Math.min(100, parseNumberFromSpeech(normalized, 50))
+      );
+
+      state.youtubePlayer.setVolume(volume);
+      await speak(`Volume ${volume} percent.`);
+    } else {
+      preventVideoAutoResume();
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    normalized.includes("skip ahead") ||
+    normalized.includes("fast forward")
+  ) {
+    if (state.youtubePlayerReady) {
+      const seconds = parseNumberFromSpeech(normalized, 30);
+      const nextTime =
+        state.youtubePlayer.getCurrentTime() + seconds;
+
+      state.youtubePlayer.seekTo(nextTime, true);
+      await speak(`Skipping ahead ${seconds} seconds.`);
+    } else {
+      preventVideoAutoResume();
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    normalized.includes("go back") ||
+    normalized.includes("rewind")
+  ) {
+    if (state.youtubePlayerReady) {
+      const seconds = parseNumberFromSpeech(normalized, 10);
+      const nextTime = Math.max(
+        0,
+        state.youtubePlayer.getCurrentTime() - seconds
+      );
+
+      state.youtubePlayer.seekTo(nextTime, true);
+      await speak(`Going back ${seconds} seconds.`);
+    } else {
+      preventVideoAutoResume();
+      await speak("There isn't a video open.");
+    }
+
+    return true;
+  }
+
+  if (
+    normalized === "next video" ||
+    normalized === "play the next video"
+  ) {
+    await playAdjacentYouTubeResult(1);
+    return true;
+  }
+
+  if (
+    normalized === "previous video" ||
+    normalized === "play the previous video"
+  ) {
+    await playAdjacentYouTubeResult(-1);
+    return true;
+  }
+
+  return false;
+}
+
+closeVideoBtn.addEventListener("click", () => {
+  closeVideoOverlay();
+});
+
+manualPlayBtn.addEventListener("click", () => {
+  manualPlayBtn.hidden = true;
+
+  if (state.youtubePlayerReady) {
+    state.youtubePlayer.playVideo();
+  }
+});
+
 function loadVoices() {
   const voices = speechSynthesis.getVoices() || [];
 
@@ -927,6 +1516,15 @@ function speak(text) {
         setMode("idle");
       }
 
+      if (
+        state.videoShouldResumeAfterSpeech &&
+        state.youtubePlayerReady &&
+        state.videoOverlayOpen
+      ) {
+        state.videoShouldResumeAfterSpeech = false;
+        state.youtubePlayer.playVideo();
+      }
+
       if (state.keepListening) {
         setTimeout(startRecognition, 250);
       }
@@ -1063,8 +1661,16 @@ function initRecognition() {
       const trailingCommand = stripWakePhrase(finalText);
 
       if (trailingCommand) {
-        await sendPrompt(trailingCommand);
+        pauseVideoForVoice(true);
+
+        const handledByYouTube =
+          await handleYouTubeCommand(trailingCommand);
+
+        if (!handledByYouTube) {
+          await sendPrompt(trailingCommand);
+        }
       } else {
+        pauseVideoForVoice(false);
         await speak("At your service.");
       }
 
@@ -1084,11 +1690,21 @@ function initRecognition() {
 
       // Ignore the wake phrase if the user repeats it by itself.
       if (!command && findWakePhrase(finalText)) {
+        pauseVideoForVoice(false);
         setMode("listening");
         return;
       }
 
-      await sendPrompt(command || finalText);
+      pauseVideoForVoice(true);
+
+      const spokenCommand = command || finalText;
+      const handledByYouTube =
+        await handleYouTubeCommand(spokenCommand);
+
+      if (!handledByYouTube) {
+        await sendPrompt(spokenCommand);
+      }
+
       return;
     }
 

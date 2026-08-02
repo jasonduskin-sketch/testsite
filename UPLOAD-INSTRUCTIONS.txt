@@ -2,25 +2,34 @@ UPLOAD THIS UPDATE UNZIPPED
 
 1. Extract this ZIP.
 2. Open the extracted folder.
-3. In GitHub, click Add file > Upload files.
-4. Drag everything inside the extracted folder into the repository.
-5. Allow GitHub to replace matching files.
-6. Commit the update.
-7. Wait for Vercel's newest deployment to say Ready.
-8. Press Ctrl+F5 on the live website.
+3. Open GitHub and enter the testsite repository.
+4. Click Add file > Upload files.
+5. Drag EVERYTHING inside the extracted folder into GitHub.
+6. Confirm the api folder contains:
+      chat.js
+      youtube.js
+7. Commit the update.
+8. Wait for Vercel's newest deployment to say Ready.
+9. Open the live website and press Ctrl+F5.
 
-WAKE WORD
+TEST THESE EXACT PHRASES:
 
-Say: "JARVIS"
+"JARVIS, play Johnny Cash Hurt on YouTube."
+"JARVIS, can you play the Superman trailer on YouTube?"
+"JARVIS, put on a video of Alabama football highlights."
+"JARVIS, show me a Johnny Cash music video."
 
-JARVIS responds: "At your service."
+The updated parser now understands natural YouTube requests instead of
+sending them to Gemini as ordinary chat questions.
 
-The session remains active for three minutes of inactivity. Every exchange
-resets the timer.
+CHECK THE ROUTE FIRST:
 
-VOICE
+https://www.simplytestsite.com/api/youtube
 
-The code prioritizes an articulate British English voice. The exact voice
-depends on what Chrome and Windows expose. Press F12 and open Console to see:
+It must show:
+"apiKeyConfigured": true
 
-JARVIS voice selected: <voice name>
+F12 CONSOLE DIAGNOSTICS:
+
+When a request is recognized, Console shows:
+Routing command to YouTube search: <search terms>
