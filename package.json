@@ -1,6 +1,6 @@
 {
-  "name": "rogue-voice-assistant-v3",
-  "version": "3.0.0",
+  "name": "rogue-voice-assistant-gemini",
+  "version": "4.0.0",
   "private": true,
   "scripts": {
     "dev": "vercel dev"
