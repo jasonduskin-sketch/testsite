@@ -509,3 +509,178 @@ body[data-state="listening"] .video-shell {
 .jarvis-voice-unlock::before {
   content: "🔊  ";
 }
+
+
+.overlay-intro {
+  display: grid;
+  gap: 0;
+}
+
+.login-sequence {
+  display: grid;
+  gap: 18px;
+}
+
+.login-headings {
+  text-align: center;
+}
+
+.login-status {
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--amber-white);
+  text-transform: uppercase;
+}
+
+.login-substatus {
+  margin: 10px 0 0;
+  color: rgba(255, 231, 184, 0.72);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.camera-shell {
+  position: relative;
+  width: min(460px, 86vw);
+  aspect-ratio: 4 / 5;
+  border-radius: 26px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 179, 46, 0.28);
+  background:
+    radial-gradient(circle at center, rgba(255, 171, 28, 0.12), rgba(0,0,0,0.72)),
+    rgba(0,0,0,0.82);
+  box-shadow:
+    0 0 0 1px rgba(255, 194, 91, 0.08) inset,
+    0 0 72px rgba(255, 142, 0, 0.14);
+}
+
+.camera-shell::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(255, 201, 92, 0.18);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.login-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.72) contrast(1.1) brightness(0.82);
+  transform: scaleX(-1);
+}
+
+.camera-grid,
+.face-outline,
+.scanline-vertical,
+.scanline-horizontal,
+.camera-readout {
+  position: absolute;
+  pointer-events: none;
+}
+
+.camera-grid {
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 196, 76, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 196, 76, 0.08) 1px, transparent 1px);
+  background-size: 30px 30px;
+  mix-blend-mode: screen;
+}
+
+.face-outline {
+  left: 50%;
+  top: 50%;
+  width: 44%;
+  height: 58%;
+  transform: translate(-50%, -50%);
+  border-radius: 45% 45% 42% 42% / 38% 38% 52% 52%;
+  border: 1px solid rgba(255, 221, 138, 0.62);
+  box-shadow:
+    0 0 26px rgba(255, 180, 36, 0.22),
+    inset 0 0 22px rgba(255, 193, 76, 0.08);
+}
+
+.scanline-vertical {
+  top: 10%;
+  bottom: 10%;
+  width: 2px;
+  left: 8%;
+  opacity: 0;
+  background: linear-gradient(180deg, transparent, rgba(255, 235, 156, 0.95), transparent);
+  box-shadow: 0 0 18px rgba(255, 206, 87, 0.85);
+}
+
+.scanline-horizontal {
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  top: 14%;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 235, 156, 0.95), transparent);
+  box-shadow: 0 0 18px rgba(255, 206, 87, 0.85);
+}
+
+.overlay[data-scan-phase="vertical"] .scanline-vertical {
+  opacity: 1;
+  animation: loginScanVertical 1.75s linear forwards;
+}
+
+.overlay[data-scan-phase="horizontal"] .scanline-horizontal {
+  opacity: 1;
+  animation: loginScanHorizontal 1.55s linear forwards;
+}
+
+.overlay[data-scan-phase="complete"] .scanline-vertical,
+.overlay[data-scan-phase="complete"] .scanline-horizontal {
+  opacity: 0;
+}
+
+.camera-readout {
+  left: 18px;
+  right: 18px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 223, 149, 0.76);
+  text-shadow: 0 0 12px rgba(255, 174, 34, 0.26);
+}
+
+.camera-readout-top {
+  top: 16px;
+}
+
+.camera-readout-bottom {
+  bottom: 16px;
+}
+
+@keyframes loginScanVertical {
+  0% { left: 10%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 90%; opacity: 0; }
+}
+
+@keyframes loginScanHorizontal {
+  0% { top: 14%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 86%; opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .camera-shell {
+    width: min(92vw, 420px);
+    aspect-ratio: 3 / 4.1;
+  }
+
+  .login-status {
+    font-size: 20px;
+  }
+}

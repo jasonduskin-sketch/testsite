@@ -1,5 +1,11 @@
 const activateBtn = document.getElementById("activateBtn");
 const overlay = document.getElementById("activationOverlay");
+const overlayIntro = document.getElementById("overlayIntro");
+const loginSequence = document.getElementById("loginSequence");
+const loginVideo = document.getElementById("loginVideo");
+const loginStatus = document.getElementById("loginStatus");
+const loginSubstatus = document.getElementById("loginSubstatus");
+const loginReadout = document.getElementById("loginReadout");
 const hologramCanvas = document.getElementById("hologram");
 const starfieldCanvas = document.getElementById("starfield");
 const hctx = hologramCanvas.getContext("2d");
@@ -64,7 +70,9 @@ const state = {
   jarvisVoiceUnlocked: false,
   jarvisVoiceObjectUrl: null,
   pendingJarvisVoiceUrl: null,
-  pendingJarvisVoiceResolve: null
+  pendingJarvisVoiceResolve: null,
+  activationInProgress: false,
+  loginCameraStream: null
 };
 
 function setMode(mode) {
@@ -1491,6 +1499,94 @@ enableJarvisVoiceBtn.addEventListener("click", async () => {
   }
 });
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function startLoginCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("Camera access is not supported in this browser.");
+  }
+
+  stopLoginCamera();
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: "user",
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    },
+    audio: false
+  });
+
+  state.loginCameraStream = stream;
+  loginVideo.srcObject = stream;
+  await loginVideo.play();
+}
+
+function stopLoginCamera() {
+  if (state.loginCameraStream) {
+    for (const track of state.loginCameraStream.getTracks()) {
+      track.stop();
+    }
+    state.loginCameraStream = null;
+  }
+
+  loginVideo.pause();
+  loginVideo.srcObject = null;
+}
+
+function setLoginMessage(title, subtitle, readout) {
+  loginStatus.textContent = title;
+  loginSubstatus.textContent = subtitle;
+  loginReadout.textContent = readout;
+}
+
+async function runLoginSequence() {
+  overlayIntro.hidden = true;
+  loginSequence.hidden = false;
+  overlay.dataset.scanPhase = "idle";
+
+  setLoginMessage(
+    "Begin Login",
+    "Initializing secure access protocol...",
+    "Awaiting optical lock"
+  );
+  await sleep(450);
+
+  await startLoginCamera();
+  setLoginMessage(
+    "Camera Linked",
+    "Visual feed established.",
+    "Optical channel live"
+  );
+  await sleep(700);
+
+  overlay.dataset.scanPhase = "vertical";
+  setLoginMessage(
+    "Facial Recognition",
+    "Running vertical contour sweep.",
+    "Mapping facial geometry"
+  );
+  await sleep(1900);
+
+  overlay.dataset.scanPhase = "horizontal";
+  setLoginMessage(
+    "Cross-Referencing",
+    "Running horizontal verification pass.",
+    "Comparing biometric signature"
+  );
+  await sleep(1700);
+
+  overlay.dataset.scanPhase = "complete";
+  setLoginMessage(
+    "Identity Confirmed",
+    "Access granted. Routing to JARVIS interface.",
+    "Confidence: 99.2%"
+  );
+  await sleep(1100);
+}
+
 function loadVoices() {
   const voices = speechSynthesis.getVoices() || [];
 
@@ -1905,20 +2001,37 @@ function initRecognition() {
 }
 
 activateBtn.addEventListener("click", async () => {
+  if (state.activationInProgress) return;
+
+  state.activationInProgress = true;
+  activateBtn.disabled = true;
+
   try {
     await initAudio();
     await unlockJarvisVoice();
+    await runLoginSequence();
+    stopLoginCamera();
     initRecognition();
 
     state.keepListening = true;
-    state.sessionActive = false;
     overlay.classList.add("hidden");
-    setMode("idle");
+    beginConversationSession();
+    await speak("Welcome back sir.");
     startRecognition();
   } catch (error) {
     console.error(error);
-    alert("Microphone permission is required.");
+    stopLoginCamera();
+    overlayIntro.hidden = false;
+    loginSequence.hidden = true;
+    overlay.dataset.scanPhase = "idle";
+    activateBtn.disabled = false;
+    state.activationInProgress = false;
+    alert("Microphone and camera permission are required.");
+    return;
   }
+
+  activateBtn.disabled = false;
+  state.activationInProgress = false;
 });
 
 resizeAll();

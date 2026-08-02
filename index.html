@@ -8,16 +8,36 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-state="idle">
-  <div id="activationOverlay" class="overlay">
+  <div id="activationOverlay" class="overlay" data-scan-phase="idle">
     <div class="activation-panel">
-      <div class="mini-reactor" aria-hidden="true">
-        <span></span><span></span><span></span>
+      <div id="overlayIntro" class="overlay-intro">
+        <div class="mini-reactor" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="brand">JARVIS</div>
+        <button id="activateBtn" class="activate-btn" type="button">
+          Activate Voice Assistant
+        </button>
+        <p id="activationHint">Grant microphone and camera access to begin your login sequence.</p>
       </div>
-      <div class="brand">JARVIS</div>
-      <button id="activateBtn" class="activate-btn" type="button">
-        Activate Voice Assistant
-      </button>
-      <p>Grant microphone access, then say “JARVIS.” It will stay awake for three minutes.</p>
+
+      <div id="loginSequence" class="login-sequence" hidden>
+        <div class="login-headings">
+          <div class="brand">JARVIS</div>
+          <div id="loginStatus" class="login-status">Begin Login</div>
+          <p id="loginSubstatus" class="login-substatus">Initializing secure access protocol...</p>
+        </div>
+
+        <div class="camera-shell">
+          <video id="loginVideo" class="login-video" playsinline muted autoplay></video>
+          <div class="camera-grid" aria-hidden="true"></div>
+          <div class="face-outline" aria-hidden="true"></div>
+          <div class="scanline-vertical" aria-hidden="true"></div>
+          <div class="scanline-horizontal" aria-hidden="true"></div>
+          <div class="camera-readout camera-readout-top">BIOMETRIC LOGIN // SIMULATION</div>
+          <div id="loginReadout" class="camera-readout camera-readout-bottom">Awaiting optical lock</div>
+        </div>
+      </div>
     </div>
   </div>
 
