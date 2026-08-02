@@ -1,37 +1,33 @@
-# Rogue Voice Assistant — Gemini Edition
+# Rogue Voice Assistant — Complete Gemini Build
 
-This build uses Gemini for the assistant's intelligence while retaining the
-animated HTML Canvas hologram, browser speech recognition, and browser voice.
+This package includes the animated holographic frontend and a Vercel Gemini
+server function at:
 
-## Required Vercel environment variables
+```text
+api/chat.mjs
+```
+
+## Required Vercel setting
 
 ```env
 GEMINI_API_KEY=your_private_gemini_key
+```
+
+The model variable is optional:
+
+```env
 GEMINI_MODEL=gemini-3.6-flash
 ```
 
-Do not upload the real API key to GitHub.
+## Backend health check
 
-## Updating an existing installation
-
-Replace the existing GitHub file:
+After deployment, visit:
 
 ```text
-api/chat.js
+https://your-domain.com/api/chat
 ```
 
-with the Gemini version included here. Then add the two environment variables
-inside Vercel and redeploy the latest production deployment.
+A working route returns JSON showing `status: "ok"` and whether the API key
+is configured.
 
-## New installation
-
-Upload the contents of this folder to the root of the GitHub repository,
-connect the repository to Vercel, add the environment variables, and deploy.
-
-## Testing
-
-Open the deployed HTTPS site in Chrome, activate microphone access, then say:
-
-```text
-Hey Rogue, tell me who you are.
-```
+The API key remains in Vercel and is never exposed through the browser code.

@@ -1,8 +1,9 @@
 {
-  "name": "rogue-voice-assistant-gemini",
-  "version": "4.0.0",
+  "name": "testsite-rogue-gemini",
+  "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "dev": "vercel dev"
+  "type": "module",
+  "engines": {
+    "node": ">=20"
   }
 }

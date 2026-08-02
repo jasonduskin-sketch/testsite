@@ -1,0 +1,48 @@
+ROGUE VOICE ASSISTANT — COMPLETE GEMINI BUILD
+
+THIS ZIP ALREADY CONTAINS THE CORRECT STRUCTURE:
+
+api/
+  chat.mjs
+app.js
+index.html
+styles.css
+package.json
+vercel.json
+.env.example
+
+GITHUB UPLOAD:
+
+1. Extract this ZIP.
+2. Open the extracted folder.
+3. In GitHub, remove the old incorrect file named "api" if one still exists.
+4. Click Add file > Upload files.
+5. Select EVERYTHING inside this extracted folder (Ctrl+A) and drag it to GitHub.
+6. Commit the changes.
+
+Do not upload the ZIP itself.
+
+VERCEL ENVIRONMENT VARIABLE:
+
+GEMINI_API_KEY = your real Gemini API key
+
+GEMINI_MODEL is optional because the backend defaults to gemini-3.6-flash.
+
+After GitHub finishes, wait for Vercel's new deployment to say Ready.
+
+TEST:
+
+Open:
+https://www.simplytestsite.com/api/chat
+
+You should see JSON similar to:
+
+{
+  "status": "ok",
+  "service": "Rogue Gemini API",
+  "model": "gemini-3.6-flash",
+  "apiKeyConfigured": true
+}
+
+Then open the main website in Chrome, activate the microphone, and say:
+"Hey Rogue, tell me who you are."
