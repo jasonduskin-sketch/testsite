@@ -819,10 +819,8 @@ async function sendPrompt(message) {
 
     await speak(reply);
   } catch (error) {
-    console.error("Rogue assistant error:", error);
-    await speak(
-      "I'm sorry, I couldn't reach the intelligence service. Please check the Vercel deployment and API configuration."
-    );
+    console.error(error);
+    await speak("I'm sorry, I couldn't reach the intelligence service. Please check the Vercel API configuration.");
   } finally {
     state.thinking = false;
     if (!state.speaking) setMode("idle");

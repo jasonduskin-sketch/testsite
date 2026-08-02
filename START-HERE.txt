@@ -1,9 +1,12 @@
-ROGUE VOICE ASSISTANT — COMPLETE GEMINI BUILD
+ROGUE VOICE ASSISTANT — FIXED COMPLETE BUILD
 
-THIS ZIP ALREADY CONTAINS THE CORRECT STRUCTURE:
+The previous deployment error was caused by an unnecessary "functions"
+pattern in vercel.json. This version removes that pattern.
+
+CORRECT STRUCTURE:
 
 api/
-  chat.mjs
+  chat.js
 app.js
 index.html
 styles.css
@@ -11,31 +14,29 @@ package.json
 vercel.json
 .env.example
 
-GITHUB UPLOAD:
+IMPORTANT GITHUB STEPS:
 
-1. Extract this ZIP.
-2. Open the extracted folder.
-3. In GitHub, remove the old incorrect file named "api" if one still exists.
-4. Click Add file > Upload files.
-5. Select EVERYTHING inside this extracted folder (Ctrl+A) and drag it to GitHub.
+1. Extract this ZIP on your computer.
+2. In your GitHub testsite repository, delete the old contents, especially:
+   - the old api item/folder
+   - any root-level chat.js or chat.mjs
+   - the old vercel.json
+3. Upload EVERYTHING inside this extracted folder.
+4. Confirm GitHub shows api as a folder.
+5. Open api and confirm chat.js is inside it.
 6. Commit the changes.
+7. Wait for Vercel to deploy the new commit.
 
-Do not upload the ZIP itself.
-
-VERCEL ENVIRONMENT VARIABLE:
+VERCEL ENVIRONMENT VARIABLES:
 
 GEMINI_API_KEY = your real Gemini API key
+GEMINI_MODEL = gemini-3.6-flash
 
-GEMINI_MODEL is optional because the backend defaults to gemini-3.6-flash.
+After deployment, test:
 
-After GitHub finishes, wait for Vercel's new deployment to say Ready.
-
-TEST:
-
-Open:
 https://www.simplytestsite.com/api/chat
 
-You should see JSON similar to:
+Expected result:
 
 {
   "status": "ok",
@@ -44,5 +45,5 @@ You should see JSON similar to:
   "apiKeyConfigured": true
 }
 
-Then open the main website in Chrome, activate the microphone, and say:
-"Hey Rogue, tell me who you are."
+If apiKeyConfigured is false, the site deployed correctly but the Gemini key
+still needs to be added to Vercel Production and the project redeployed.

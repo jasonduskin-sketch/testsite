@@ -1,33 +1,27 @@
-# Rogue Voice Assistant — Complete Gemini Build
+# Rogue Voice Assistant — Fixed Gemini Build
 
-This package includes the animated holographic frontend and a Vercel Gemini
-server function at:
+This build includes:
 
-```text
-api/chat.mjs
-```
+- the animated holographic frontend
+- `api/chat.js` as a zero-configuration Vercel Function
+- Gemini integration through `GEMINI_API_KEY`
+- a browser health check at `/api/chat`
 
-## Required Vercel setting
+No custom `functions` pattern is used in `vercel.json`.
+
+## Vercel variables
 
 ```env
 GEMINI_API_KEY=your_private_gemini_key
-```
-
-The model variable is optional:
-
-```env
 GEMINI_MODEL=gemini-3.6-flash
 ```
 
-## Backend health check
+## Health check
 
-After deployment, visit:
+Visit:
 
 ```text
 https://your-domain.com/api/chat
 ```
 
-A working route returns JSON showing `status: "ok"` and whether the API key
-is configured.
-
-The API key remains in Vercel and is never exposed through the browser code.
+A successful deployment returns JSON with `status: "ok"`.
